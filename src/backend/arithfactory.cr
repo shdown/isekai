@@ -7,7 +7,7 @@ module Isekai
 
 # Check ReqFactory's documentation.
 class ArithFactory < RequestFactory
-    def initialize(@output_filename : String, @circuit_inputs : Array(DFGExpr), @circuit_nizk_inputs : Array(DFGExpr)|Nil,
+    def initialize(@output_filename : String, @circuit_inputs : Array(DFGExpr)|Nil, @circuit_nizk_inputs : Array(DFGExpr)|Nil,
         @circuit_outputs : Array(Tuple(StorageKey, DFGExpr))?, @bit_width : Int32, @circuit_inputs_val : Array(Int32))
         super(@output_filename, @circuit_inputs, @circuit_nizk_inputs, @circuit_outputs, @bit_width, @circuit_inputs_val)
     end

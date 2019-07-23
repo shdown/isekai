@@ -9,7 +9,7 @@ module Isekai
     # all dependencies of the output into the Buses.
     # The translation from DFGExpr into BusReq is inside make_req.
     abstract class RequestFactory < Collapser(BaseReq, Bus)
-        def initialize(@output_filename : String, @circuit_inputs : Array(DFGExpr), @circuit_nizk_inputs : Array(DFGExpr)|Nil,
+        def initialize(@output_filename : String, @circuit_inputs : Array(DFGExpr)|Nil, @circuit_nizk_inputs : Array(DFGExpr)|Nil,
                 @circuit_outputs : Array(Tuple(StorageKey, DFGExpr)), @bit_width, @circuit_inputs_val : Array(Int32))
             super()
 
@@ -82,15 +82,17 @@ module Isekai
 
         # Genenerate inputs if not connected for the normalization.
         def generate_inputs(circuit_inputs, circuit_nizk_inputs)
+            if circuit_inputs
             circuit_inputs.each do |input|
-                expr = input
-                req = make_input_req(expr)
-                begin
-                    bus = lookup(req).as(ArithmeticInputBaseBus)
-                    bus.set_used(true)
-                rescue
-                    bus = collapse_tree(req).as(ArithmeticInputBaseBus)
-                    bus.set_used(true)
+                    expr = input
+                    req = make_input_req(expr)
+                    begin
+                        bus = lookup(req).as(ArithmeticInputBaseBus)
+                        bus.set_used(true)
+                    rescue
+                        bus = collapse_tree(req).as(ArithmeticInputBaseBus)
+                        bus.set_used(true)
+                    end
                 end
             end
 
@@ -177,13 +179,15 @@ module Isekai
                 #TODO What about LOGIC variables?
                 #arith file: inputs +1
                 i = 0;
-                @circuit_inputs.each do |circuit_in|
-                    val = 0;
-                    if i < @circuit_inputs_val.size
-                        val = @circuit_inputs_val[i];
-                    end
-                    file.print("#{i} #{val.to_s(16)}\n")  #No value..yet...
-                    i += 1                   
+                if circ = @circuit_inputs
+                    circ.each do |circuit_in|
+                        val = 0;
+                        if i < @circuit_inputs_val.size
+                            val = @circuit_inputs_val[i];
+                        end
+                        file.print("#{i} #{val.to_s(16)}\n")  #No value..yet...
+                        i += 1
+                    end                   
                 end
                 file.print("#{i} 1\n")      # the ONE constant
                 ni = i
