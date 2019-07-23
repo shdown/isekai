@@ -8,7 +8,7 @@ module Isekai
 
     class FieldTransformer
         def initialize (
-                @input_storage : Storage, @inputs : Array(DFGExpr),
+                @input_storage : Storage|Nil, @inputs : Array(DFGExpr)|Nil,
                 @nizk_input_storage : Storage|Nil, @nizk_inputs : Array(DFGExpr)|Nil)
             super()
         end
@@ -19,7 +19,7 @@ module Isekai
                 field = expr.as(Field)
                 case field.@key.@storage
                 when @input_storage
-                    @inputs[field.@key.@idx]
+                    @inputs.as(Array(DFGExpr))[field.@key.@idx]
                 when @nizk_input_storage
                     @nizk_inputs.as(Array(DFGExpr))[field.@key.@idx]
                 else
@@ -40,7 +40,7 @@ module Isekai
 
     class BitcodeParser
 
-        @inputs = Array(DFGExpr).new
+        @inputs : Array(DFGExpr)?
         @nizk_inputs : Array(DFGExpr)?
         @outputs = Array(Tuple(StorageKey, DFGExpr)).new
 
@@ -55,10 +55,11 @@ module Isekai
         end
 
         def input_storage!
-            @inout_storages[0]
+            return @inout_storages[0] if @type == 1
         end
 
         def nizk_input_storage!
+            return @inout_storages[0] if @type == 2
             return @inout_storages[1] if @inout_storages.size == 3
         end
 
@@ -84,6 +85,14 @@ module Isekai
                 LibLLVM_C.is_opaque_struct(s_ty) == 0
 
             nelems = LibLLVM_C.count_struct_element_types(s_ty)
+
+            if @inout_storages.size == 0
+                if name == "Input"
+                    @type = 1
+                else
+                    @type = 2
+                end
+            end
 
             st = Storage.new(name, nelems.to_i32)
             @inout_storages << st
@@ -242,7 +251,12 @@ module Isekai
 
             case func_nparams
             when 2
-                inspect_param!("Input",  params[0], param_tys[0])
+                name = LibLLVM_C.get_struct_name(LibLLVM_C.get_element_type(param_tys[0]))
+                if String.new(name) == "struct.Input"
+                    inspect_param!("Input",  params[0], param_tys[0])
+                else
+                    inspect_param!("NizkInput",  params[0], param_tys[0])
+                end
                 inspect_param!("Output", params[1], param_tys[1])
             when 3
                 inspect_param!("Input",     params[0], param_tys[0])
@@ -252,7 +266,10 @@ module Isekai
                 raise "Function takes #{func_nparams} parameter(s), expected 2 or 3"
             end
 
-            @inputs = gen_input_array(input_storage!, Input).as(Array(DFGExpr))
+            input_storage = input_storage!
+            if input_storage
+                @inputs = gen_input_array(input_storage, Input).as(Array(DFGExpr))
+            end
 
             nizk_input_storage = nizk_input_storage!
             if nizk_input_storage
