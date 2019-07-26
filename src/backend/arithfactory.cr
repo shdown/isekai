@@ -34,8 +34,12 @@ class ArithFactory < RequestFactory
 
     def make_req(expr, type : String) : BaseReq
         case expr
-        when .is_a? Input
-			result = ArithmeticInputReq.new(self, expr.as(Input), type)
+        when .is_a? Field
+            if @circuit_inputs.size && expr.@key == @circuit_inputs[0].as(InputBase).@storage_key
+                result = ArithmeticInputReq.new(self, expr, type)
+            else
+                result = super(expr, type)
+            end
 		when .is_a? NIZKInput
 			result = ArithmeticNIZKInputReq.new(self, expr.as(NIZKInput), type)
 		when .is_a? Conditional

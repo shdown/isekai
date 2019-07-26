@@ -30,8 +30,12 @@ class BooleanFactory < RequestFactory
 
     def make_req(expr, type : String) : BaseReq
         case expr
-        when .is_a? Input
-            result = BooleanInputReq.new(self, expr, type)
+        when .is_a? Field
+            if @circuit_inputs.size && expr.@key == @circuit_inputs[0].as(InputBase).@storage_key
+                result = BooleanInputReq.new(self, expr, type)
+            else
+                result = super(expr, type)
+            end
         when .is_a?  Constant
                 result = ConstantReq.new(self, expr, type)
         when .is_a?  Add
